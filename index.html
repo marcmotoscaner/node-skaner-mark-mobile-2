@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarcMotosScaner</title>
+    <link rel="icon" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="/icon-512x512.png" />
+    <meta name="theme-color" content="#9acdb9">
+
+    <link rel="manifest" href="/manifest.json" />
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: rgb(47, 47, 47);
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #9acdb9;
+            transition: all .3s ease;
+            color: rgb(47, 47, 47);
+        }
+
+        #toggleButton:hover{
+            background-color: #abd5c4;
+        }
+    </style>    
+</head>
+<body>
+    
+    <div style="display: flex; flex-flow: column nowrap; width: 100%; height: 100%; justify-content: center; align-items: center;">
+        <dotlottie-player id="lottie-player" src="https://lottie.host/5d34b982-2cdd-41b7-a9e0-3e851383eed2/7Tiv7Lc7YJ.lottie" background="transparent" speed="1" style="width: 300px; height: 300px" loop></dotlottie-player>
+        <button style="margin-top: 80px; border: none; border-radius: 8px; width: 150px; height: 54px; font-size: 22px; font-weight: 500; letter-spacing: 1px;" id="toggleButton">START</button>
+    </div>
+
+    <script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs" type="module"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+
+    <script>
+        const button = document.getElementById('toggleButton');
+        const lottieFile = document.getElementById('lottie-player');
+        let isRunning = false;
+        const socket = io();
+
+        var sound = new Howl({
+            src: ['smrpg_correct.wav']
+        });
+
+        function playSound() {
+            sound.play();
+        }
+
+        function callPhoneNumber(number) {
+            // Tworzenie ukrytego linku do dzwonienia
+            const callLink = document.createElement('a');
+            callLink.href = `tel:00${number}`;
+            callLink.style.display = 'none'; // Ukryj link
+
+            // Dodaj link do dokumentu
+            document.body.appendChild(callLink);
+
+            // Programowe kliknięcie w link
+            callLink.click();
+
+            // Usuń link po kliknięciu
+            document.body.removeChild(callLink);
+        }
+
+        // Nasłuchiwanie na nowe oferty
+        socket.on('newOffer', (offers) => {
+            isRunning = false;
+            lottieFile.stop(); // Usuń autoplay
+            button.textContent = 'START';
+            playSound();
+            callPhoneNumber(33231976656);
+        });
+
+        button.addEventListener('click', () => {
+            if (!isRunning) {
+                fetch('/start', { method: 'POST' })
+                    .then(response => response.text())
+                    .then(data => {
+                        console.log(data);
+                        button.textContent = 'STOP';
+                        isRunning = true;
+                        lottieFile.play(); // Ustaw autoplay
+                    });
+            } else {
+                fetch('/stop', { method: 'POST' })
+                    .then(response => response.text())
+                    .then(data => {
+                        console.log(data);
+                        lottieFile.stop(); // Usuń autoplay
+                        button.textContent = 'START';
+                        isRunning = false;
+                    });
+            }
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js').then(function() {
+                console.log('Service Worker registered');
+            }).catch(function(error) {
+                console.log('Service Worker registration failed:', error);
+            });
+        }
+    </script>
+</body>
+</html>
